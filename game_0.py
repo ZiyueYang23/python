@@ -78,7 +78,7 @@ class Board:
         # 判断特殊方块在划分的四个区域中的那一个
         # round是四舍五入函数
         # 注意加1的细节
-        #  /side的目的就是将
+        #  /side的目的就是将其映射到0，1
         pos = (round((d_x - t_x + 1) / side), round((d_y - t_y + 1) / side))
         # 计算中心点
         center = (round(t_x + side / 2 - 1), round(t_y + side / 2 - 1))
