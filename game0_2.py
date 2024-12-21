@@ -114,14 +114,14 @@ def on_start_button_click():
         messagebox.showerror("输入错误", f"输入无效: {str(e)}")
 
 
-# 创建主窗口
+
 root = tk.Tk()
 root.title("棋盘覆盖问题")
 
-# 设置窗口大小
+
 root.geometry("400x300")
 
-# 标签和输入框
+
 label_k = tk.Label(root, text="请输入正整数K (棋盘边长为2^k):")
 label_k.pack(pady=10)
 entry_k = tk.Entry(root)

@@ -172,7 +172,7 @@ def plot_comparison(original_times, optimized_times, k_values):
 
     # 绘制原始和优化算法的对比图
     plt.plot(k_values, original_times, label="原始算法", marker="o", color="blue")
-    plt.plot(k_values, optimized_times, label="优化算法", marker="o", color="green")
+    plt.plot(k_values, optimized_times, label="优化算法", marker="o", color="orange")
 
     # 计算性能提升百分比
     improvement_percent = [

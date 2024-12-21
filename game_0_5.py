@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+
+
 class Board:
     def __init__(self, side, x, y):
         """
@@ -15,15 +17,6 @@ class Board:
         self.board[x][y] = (side * side - 1) / 3 + 1
         self.t = 1
         self.side = side
-
-    def visualize(self):
-        """
-        可视化函数
-        :return: None
-        """
-        plt.imshow(self.board, cmap=plt.cm.gray)
-        plt.colorbar()
-        plt.show()
 
     def fill_block(self, x, y):
         """
@@ -71,7 +64,7 @@ class Board:
                 self.fill(x1, y1, side / 2, d_x, d_y)
 
 
-class BoardOptimized:
+class OptimizedBoard:
     def __init__(self, side, x, y):
         """
         初始化棋盘
@@ -81,10 +74,10 @@ class BoardOptimized:
         :param y: 特殊点纵坐标
         """
         self.special_block = (x, y)
-        self.board = np.zeros((side, side), dtype=int)
-        self.board[x][y] = (side * side - 1) // 3 + 1
-        self.t = 1
         self.side = side
+        self.board = np.zeros((side, side), dtype=int)
+        self.board[x][y] = (side * side - 1) / 3 + 1
+        self.t = 1
 
     def fill_block(self, x, y):
         """
@@ -95,12 +88,10 @@ class BoardOptimized:
         """
         if self.board[x][y] == 0:
             self.board[x][y] = self.t
-        else:
-            raise Exception
 
     def fill(self, t_x, t_y, side, d_x, d_y):
         """
-        递归函数填充棋盘或子棋盘（下文称区块)
+        优化递归填充函数
         :param t_x: 区块左上角x
         :param t_y: 区块左上角y
         :param side: 区块边长
@@ -110,100 +101,133 @@ class BoardOptimized:
         """
         if side == 1:
             return
-
-        # 计算区块中的特殊点所在的位置
         pos = (round((d_x - t_x + 1) / side), round((d_y - t_y + 1) / side))
-
-        # 计算区块中心
         center = (round(t_x + side / 2 - 1), round(t_y + side / 2 - 1))
-
-        # 填充其他三个块
         ls = [(0, 0), (0, 1), (1, 0), (1, 1)]
-        for i in ls:
-            if i != pos:
-                x = center[0] + i[0]
-                y = center[1] + i[1]
-                self.fill_block(x, y)
+
+        # 使用NumPy批量填充区块
+        fill_coords = [(center[0] + i[0], center[1] + i[1]) for i in ls if i != pos]
+        for x, y in fill_coords:
+            self.fill_block(x, y)
 
         self.t += 1
-        # 递归调用
+
         for i in ls:
             if i != pos:
-                self.fill(
-                    t_x + (i[0] * side // 2),
-                    t_y + (i[1] * side // 2),
-                    side // 2,
-                    d_x,
-                    d_y,
-                )
+                x1 = t_x + i[0] * (side / 2)
+                y1 = t_y + i[1] * (side / 2)
+                self.fill(x1, y1, side / 2, x, y)
+            else:
+                x1 = t_x + i[0] * (side / 2)
+                y1 = t_y + i[1] * (side / 2)
+                self.fill(x1, y1, side / 2, d_x, d_y)
 
 
-def run_experiment(k_range, trials, board_class):
+def run_experiment():
     """
-    运行实验，计算每个k值的平均运行时间
-    :param k_range: k值范围
-    :param trials: 每个k值的实验次数
-    :param board_class: 棋盘类
-    :return: 每个k值的平均时间
+    运行从k=1到k=12的实验，并记录运行时间
+    :return: k值的列表与对应的平均运行时间
     """
+    k_values = list(range(1, 13))
     avg_times = []
-    for k in k_range:
-        total_time = 0
-        for _ in range(trials):
+
+    for k in k_values:
+        times = []
+        for _ in range(10):  # 每个k值运行10次
+            loc_x, loc_y = 2**k // 2, 2**k // 2  # 使用棋盘的中心作为特殊点
             side = 2**k
-            x, y = side // 2, side // 2  # 设置特殊点
-            board = board_class(side, x, y)
+            board = OptimizedBoard(side, loc_x, loc_y)
+
             start_time = time.time()
-            board.fill(0, 0, side, x, y)
+            board.fill(0, 0, side, loc_x, loc_y)
             end_time = time.time()
-            total_time += end_time - start_time
-        avg_times.append(total_time / trials)
-    return avg_times
+
+            elapsed_time = end_time - start_time
+            times.append(elapsed_time)
+
+        avg_times.append(np.mean(times))  # 计算平均运行时间
+
+    return k_values, avg_times
 
 
-def plot_comparison(k_range, avg_times_optimized, avg_times_unoptimized):
+def run_original_experiment():
     """
-    绘制对比图
-    :param k_range: k值范围
-    :param avg_times_optimized: 优化后的平均时间
-    :param avg_times_unoptimized: 未优化的平均时间
-    :return: None
+    运行原始算法的实验
+    :return: k值的列表与对应的平均运行时间
     """
-    plt.plot(k_range, avg_times_optimized, label="Optimized")
-    plt.plot(k_range, avg_times_unoptimized, label="Unoptimized")
-    plt.xlabel("k value")
-    plt.ylabel("Average Time (seconds)")
+    k_values = list(range(1, 13))
+    avg_times = []
+
+    for k in k_values:
+        times = []
+        for _ in range(10):  # 每个k值运行10次
+            loc_x, loc_y = 2**k // 2, 2**k // 2  # 使用棋盘的中心作为特殊点
+            side = 2**k
+            board = Board(side, loc_x, loc_y)  # 使用原始算法
+
+            start_time = time.time()
+            board.fill(0, 0, side, loc_x, loc_y)
+            end_time = time.time()
+
+            elapsed_time = end_time - start_time
+            times.append(elapsed_time)
+
+        avg_times.append(np.mean(times))  # 计算平均运行时间
+
+    return k_values, avg_times
+
+
+def plot_comparison(original_times, optimized_times, k_values):
+    """
+    绘制对比图并记录数据
+    :param original_times: 原始算法的运行时间
+    :param optimized_times: 优化算法的运行时间
+    :param k_values: k值的列表
+    """
+    plt.figure(figsize=(10, 6))
+
+    # 绘制原始和优化算法的对比图
+    plt.plot(k_values, original_times, label="原始算法", marker="o", color="blue")
+    plt.plot(k_values, optimized_times, label="优化算法", marker="o", color="orange")
+
+    # 计算性能提升百分比
+    improvement_percent = [
+        (orig - opt) / orig * 100 if opt != 0 else 0
+        for orig, opt in zip(original_times, optimized_times)
+    ]
+
+    # 输出性能提升百分比
+    print("性能提升百分比：", improvement_percent)
+
+    # 保存数据到文件
+    with open("performance_comparison.txt", "w") as file:
+        file.write("k值, 原始算法时间 (秒), 优化算法时间 (秒), 性能提升百分比\n")
+        for k, orig, opt, imp in zip(
+            k_values, original_times, optimized_times, improvement_percent
+        ):
+            file.write(f"{k}, {orig:.6f}, {opt:.6f}, {imp:.2f}%\n")
+
+    # 添加图表标题与标签
+    plt.title("原始算法与优化算法运行时间对比", fontsize=14)
+    plt.xlabel("k值", fontsize=12)
+    plt.ylabel("平均运行时间 (秒)", fontsize=12)
     plt.legend()
-    plt.title("Comparison of Optimized and Unoptimized Versions")
+    plt.grid(True)
+
+    # 显示图表
     plt.show()
 
 
-def calculate_speedup(avg_times_optimized, avg_times_unoptimized):
-    """
-    计算效率提升百分比
-    :param avg_times_optimized: 优化后的平均时间
-    :param avg_times_unoptimized: 未优化的平均时间
-    :return: 提升百分比
-    """
-    speedup = []
-    for opt, unopt in zip(avg_times_optimized, avg_times_unoptimized):
-        speedup.append((unopt - opt) / unopt * 100)
-    return speedup
+def main():
+    # 运行原始算法实验
+    original_k_values, original_times = run_original_experiment()
+
+    # 运行优化算法实验
+    optimized_k_values, optimized_times = run_experiment()
+
+    # 绘制性能对比图，并记录数据
+    plot_comparison(original_times, optimized_times, original_k_values)
 
 
 if __name__ == "__main__":
-    k_range = range(1, 13)  # k从1到12
-    trials = 10  # 每个k值进行10次实验
-
-    # 运行优化后的实验
-    avg_times_optimized = run_experiment(k_range, trials, BoardOptimized)
-
-    # 运行未优化的实验
-    avg_times_unoptimized = run_experiment(k_range, trials, Board)
-
-    # 绘制对比图
-    plot_comparison(k_range, avg_times_optimized, avg_times_unoptimized)
-
-    # 计算并打印效率提升百分比
-    speedup = calculate_speedup(avg_times_optimized, avg_times_unoptimized)
-    print("Efficiency improvement: ", speedup)
+    main()
